@@ -135,7 +135,18 @@ class MovingPlatform(Platform):
                 # Record how far we actually moved, so riders can follow
                 self.dx = self.rect.x - old_x
                 self.dy = self.rect.y - old_y
-    
+                
+                
+                
+class Door:
+    def __init__(self, x, y, width=60, height=100, color=(240, 200, 60)):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.color = color
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, self.color, self.rect, border_radius=8)
+        # little door knob
+        pygame.draw.circle(screen, (60, 40, 10), (self.rect.right - 12, self.rect.centery), 5)    
     
         
 
@@ -147,6 +158,10 @@ class Game:
         self.players = (Player(150, 400, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, "dude2.png"),
                          Player(450, 400, pygame.K_a, pygame.K_d, pygame.K_w, "dude1.png"))  # Create two players with different controls and images
         self.running = True
+        self.won = False
+        self.font = pygame.font.SysFont("Helvetica Bold", 80)
+        self.small_font = pygame.font.SysFont("Helvetica Bold", 35)
+        self.doors = [Door(1150,450)]
         self.platforms = [
         Platform(0, 550, 1280, 170),   
         Platform(300, 430, 200, 20),
@@ -162,17 +177,29 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            if self.won and event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                self.running = False
             for player in self.players:
                 player.handle_event(event)  # Handle input events for each player
 
 
     def update(self):
+        
+        if self.won:
+            return
+        
         for platform in self.platforms:
             platform.update()
 
         keys = pygame.key.get_pressed()
         for player in self.players:
             player.update(keys, self.platforms)
+        
+        for door in self.doors:
+            if all(door.rect.colliderect(p.rect) for p in self.players):
+                self.won = True
+            
+  
 
 
     def draw(self):
@@ -181,6 +208,22 @@ class Game:
             platform.draw(self.screen)
         for player in self.players:
             player.draw(self.screen)
+        
+        for door in self.doors:
+            door.draw(self.screen)
+        
+        if self.won:
+        # Dark overlay
+            overlay = pygame.Surface((1280, 720), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            self.screen.blit(overlay, (0, 0))
+
+            text = self.font.render("YOU WIN!", True, (255, 255, 255))
+            self.screen.blit(text, text.get_rect(center=(640, 320)))
+
+            hint = self.small_font.render("Press ENTER to return to menu", True, (220, 220, 220))
+            self.screen.blit(hint, hint.get_rect(center=(640, 400)))
+            
         pygame.display.flip()
 
     def run(self):
@@ -191,7 +234,7 @@ class Game:
             self.clock.tick(60)
 
 
-        pygame.quit()
+
         
 
 pygame.init()
@@ -296,8 +339,10 @@ def help_menu():
 
         pygame.display.update()
 
-        
+def start():
+    Game().run()
 
+        
 start_menu()
 
 
